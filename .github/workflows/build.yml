@@ -57,7 +57,7 @@ jobs:
           cd x86_64-godot-linux-gnu_sdk-buildroot
           ./relocate-sdk.sh
           rm -f bin/{aclocal*,auto*,libtool*,m4}
-          echo "PATH=/home/runner/x86_64-godot-linux-gnu_sdk-buildroot/bin:${PATH}" >> $GITHUB_ENV
+          echo "/home/runner/x86_64-godot-linux-gnu_sdk-buildroot/bin" >> $GITHUB_PATH
       - name: Install Linux SDK (x86)
         if: matrix.target == 'x86'
         run: |
@@ -68,7 +68,7 @@ jobs:
           cd i686-godot-linux-gnu_sdk-buildroot
           ./relocate-sdk.sh
           rm -f bin/{aclocal*,auto*,libtool*,m4}
-          echo "PATH=/home/runner/i686-godot-linux-gnu_sdk-buildroot/bin:${PATH}" >> $GITHUB_ENV
+          echo "/home/runner/i686-godot-linux-gnu_sdk-buildroot/bin" >> $GITHUB_PATH
       - name: Cache Mono Sources
         id: cache_mono_sources
         uses: actions/cache@v3
