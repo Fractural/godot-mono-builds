@@ -756,7 +756,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: ./
-      - name: Upload linux-x86
+      - name: Upload Artifact to Release
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
