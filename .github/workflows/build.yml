@@ -1,7 +1,6 @@
 name: Build
 
 on:
-  workflow_dispatch:
   push:
     branches:
     - '**'
@@ -22,11 +21,9 @@ on:
     branches:
     - 'release/**'
 
-# Use ubuntu-latest for other platforms.
-
 env:
   # Use SHA or tag instead of the branch for caching purposes.
-  MONO_TAG: mono-6.12.0.144
+  MONO_TAG: mono-6.12.0.182
   PYTHON_VERSION: '3.10'
   # Should match the version that Mono supports.
   EMSDK_VERSION: 1.39.9
@@ -58,7 +55,7 @@ jobs:
           cd x86_64-godot-linux-gnu_sdk-buildroot
           ./relocate-sdk.sh
           rm -f bin/{aclocal*,auto*,libtool*,m4}
-          echo "/home/runner/x86_64-godot-linux-gnu_sdk-buildroot/bin" >> $GITHUB_PATH
+          echo "PATH=/home/runner/x86_64-godot-linux-gnu_sdk-buildroot/bin:${PATH}" >> $GITHUB_ENV
       - name: Install Linux SDK (x86)
         if: matrix.target == 'x86'
         run: |
@@ -69,7 +66,7 @@ jobs:
           cd i686-godot-linux-gnu_sdk-buildroot
           ./relocate-sdk.sh
           rm -f bin/{aclocal*,auto*,libtool*,m4}
-          echo "/home/runner/i686-godot-linux-gnu_sdk-buildroot/bin" >> $GITHUB_PATH
+          echo "PATH=/home/runner/i686-godot-linux-gnu_sdk-buildroot/bin:${PATH}" >> $GITHUB_ENV
       - name: Cache Mono Sources
         id: cache_mono_sources
         uses: actions/cache@v3
@@ -557,15 +554,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         target: [llvm64, llvmwin64]
         exclude:
-          # Ubuntu 18.04 is only needed for the Linux build
-          - os: ubuntu-18.04
-            target: llvmwin64
-          # Ubuntu latest is only needed for the Windows build
-          - os: ubuntu-latest
-            target: llvm64
           # We already build for Windows on ubuntu-latest
           - os: macos-latest
             target: llvmwin64
@@ -583,7 +574,18 @@ jobs:
         if: steps.cache_llvm.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install git autoconf libtool libtool-bin automake build-essential gettext cmake python3 curl
+          sudo apt-get -y install git autoconf libtool libtool-bin automake gettext cmake python3 curl
+      - name: Install Linux SDK (x86_64)
+        if: steps.cache_llvm.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        run: |
+          cd /home/runner
+          curl -LO https://downloads.tuxfamily.org/godotengine/toolchains/linux/2021-02-11/x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          tar xf x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          rm -f x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          cd x86_64-godot-linux-gnu_sdk-buildroot
+          ./relocate-sdk.sh
+          rm -f bin/{aclocal*,auto*,libtool*,m4}
+          echo "PATH=/home/runner/x86_64-godot-linux-gnu_sdk-buildroot/bin:${PATH}" >> $GITHUB_ENV
       - name: Install Dependencies (Linux Targeting Windows)
         if: steps.cache_llvm.outputs.cache-hit != 'true' && runner.os == 'Linux' && matrix.target == 'llvmwin64'
         run: |
@@ -645,7 +647,7 @@ jobs:
 
   bcl:
     name: BCL
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         product: [desktop, desktop-win32, android, ios, wasm]
@@ -656,7 +658,17 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install git autoconf libtool libtool-bin automake build-essential gettext cmake python3 curl
+          sudo apt-get -y install git autoconf libtool libtool-bin automake gettext cmake python3 curl
+      - name: Install Linux SDK (x86_64)
+        run: |
+          cd /home/runner
+          curl -LO https://downloads.tuxfamily.org/godotengine/toolchains/linux/2021-02-11/x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          tar xf x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          rm -f x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          cd x86_64-godot-linux-gnu_sdk-buildroot
+          ./relocate-sdk.sh
+          rm -f bin/{aclocal*,auto*,libtool*,m4}
+          echo "PATH=/home/runner/x86_64-godot-linux-gnu_sdk-buildroot/bin:${PATH}" >> $GITHUB_ENV
       - name: Cache Mono Sources
         id: cache_mono_sources
         uses: actions/cache@v3
@@ -730,7 +742,6 @@ jobs:
           release_name: Release ${{ steps.short-sha.outputs.sha7 }} with ${{ env.MONO_TAG }}
           body: |
             Mono Version: ${{ env.MONO_TAG }}
-
             EMSDK Version: ${{ env.EMSDK_VERSION }}
             iOS Min Version: ${{ env.IOS_VERSION_MIN }}
           draft: false
@@ -746,8 +757,8 @@ jobs:
         artifact_name: [linux-x86, linux-x86_64,
                         windows-x86, windows-x86_64,
                         osx-arm64, osx-x86_64,
-                        ios-arm64, ios-x86_64, ios-arm64-sim, ios-cross-arm64,
-                        android-armv7, android-arm64v8, android-x86, android-x86_64,
+                        ios-arm64, ios-x86_64, ios-cross-arm64,
+                        android-armeabi-v7a, android-arm64-v8a, android-x86, android-x86_64,
                         wasm-runtime, wasm-runtime-threads,
                         bcl-desktop, bcl-desktop-win32, bcl-android, bcl-ios, bcl-wasm]
     steps:
@@ -756,7 +767,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: ./
-      - name: Upload Artifact to Release
+      - name: Upload linux-x86
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
